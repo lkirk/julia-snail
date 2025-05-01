@@ -86,13 +86,42 @@ your org notebook"
   (when char
       (goto-char char)))
 
+
+(defun indent-string (string mode)
+  "Indent STRING using MODE's indentation rules.
+Suppress messages and mode hooks."
+  (let ((inhibit-message t)
+        (delay-mode-hooks
+          t))
+    (with-temp-buffer
+      (insert string)
+      (funcall mode)
+      (indent-region (point-min) (point-max))
+      (buffer-string))))
+
+
+(defun org-babel-expand-body:julia (body params)
+  "Expand BODY according to PARAMS.
+Return the expanded body, a string containing the julia we need to evaluate,
+possibly wrapped in a let block. No variable assignments for now, just let
+encapsulation"
+  (let* ((letblock
+          (when (seq-some (lambda (l) (eq (car l) :let)) params)
+              "let\n"))
+         (endblock
+          (when letblock
+              "\nend\n")))
+    (indent-string (concat letblock body endblock) 'julia-mode)))
+
+
 ;; This function was adapted from ob-julia-vterm by Shigeaki Nishina (GPL-v3)
 ;; https://github.com/shg/ob-julia-vterm.el as of April 14, 2022
 (defun org-babel-execute:julia (body params)
   (let ((src-file (concat (org-babel-temp-file "julia-src-") ".jl"))
         (out-file (org-babel-temp-file "julia-out-"))
         (module (let ((maybe-module (cdr (assq :module params))))
-                  (if maybe-module maybe-module "Main"))))
+                  (if maybe-module maybe-module "Main")))
+        (body (org-babel-expand-body:julia)))
     (with-temp-file src-file (insert body))
     (julia-snail/ob-julia-evaluate module body src-file out-file)
     (let ((out (with-temp-buffer
