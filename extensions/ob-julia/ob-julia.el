@@ -121,7 +121,7 @@ encapsulation"
         (out-file (org-babel-temp-file "julia-out-"))
         (module (let ((maybe-module (cdr (assq :module params))))
                   (if maybe-module maybe-module "Main")))
-        (body (org-babel-expand-body:julia)))
+        (body (org-babel-expand-body:julia body params)))
     (with-temp-file src-file (insert body))
     (julia-snail/ob-julia-evaluate module body src-file out-file)
     (let ((out (with-temp-buffer
